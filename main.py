@@ -84,6 +84,53 @@ def stream(id: str):
     return {"url": url, "title": title, "uploader": uploader}
 
 
+@app.get("/soundcloud/search")
+def soundcloud_search(q: str, limit: int = 20):
+    raw = run_ytdlp([
+        f"scsearch{limit}:{q}",
+        "--print", "%(webpage_url)s\t%(title)s\t%(uploader)s\t%(duration)s\t%(thumbnail)s",
+        "--no-download",
+        "--flat-playlist",
+    ])
+    results = []
+    for line in raw.splitlines():
+        parts = line.split("\t")
+        if len(parts) < 4:
+            continue
+        track_url, title, uploader, duration = parts[:4]
+        thumbnail = parts[4] if len(parts) > 4 else ""
+        try:
+            dur = int(float(duration))
+        except (ValueError, TypeError):
+            dur = 0
+        results.append({
+            "id": track_url,
+            "title": title,
+            "uploader": uploader,
+            "duration": dur,
+            "thumbnail": thumbnail,
+            "source": "soundcloud",
+        })
+    return results
+
+
+@app.get("/soundcloud/stream")
+def soundcloud_stream(url: str):
+    if "soundcloud.com" not in url:
+        raise HTTPException(status_code=400, detail="Invalid SoundCloud URL")
+    raw = run_ytdlp([
+        url,
+        "--print", "%(url)s\t%(title)s\t%(uploader)s",
+        "--format", "bestaudio/best",
+        "--no-download",
+    ])
+    parts = raw.split("\t")
+    if len(parts) < 3:
+        raise HTTPException(status_code=500, detail="Failed to extract stream")
+    stream_url, title, uploader = parts[:3]
+    return {"url": stream_url, "title": title, "uploader": uploader}
+
+
 @app.get("/proxy")
 async def proxy_audio(url: str, request: Request):
     req_headers = {
