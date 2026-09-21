@@ -1,8 +1,9 @@
 import subprocess
-import json
 import re
-from fastapi import FastAPI, HTTPException
+import httpx
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 app = FastAPI()
 
@@ -14,7 +15,7 @@ app.add_middleware(
 )
 
 
-def run_ytdlp(args: list[str]) -> dict:
+def run_ytdlp(args: list[str]) -> str:
     result = subprocess.run(
         ["yt-dlp", "--no-warnings", *args],
         capture_output=True,
@@ -26,32 +27,44 @@ def run_ytdlp(args: list[str]) -> dict:
     return result.stdout.strip()
 
 
-@app.get("/search")
-def search(q: str, limit: int = 10):
-    raw = run_ytdlp([
-        f"ytsearch{limit}:{q}",
-        "--print", "%(id)s\t%(title)s\t%(uploader)s\t%(duration)s\t%(thumbnail)s",
-        "--no-download",
-        "--flat-playlist",
-    ])
+def parse_tracks(raw: str) -> list[dict]:
     results = []
     for line in raw.splitlines():
         parts = line.split("\t")
-        if len(parts) < 5:
+        if len(parts) < 4:
             continue
-        vid_id, title, uploader, duration, thumbnail = parts[:5]
+        vid_id, title, uploader, duration = parts[:4]
         try:
             dur = int(duration)
         except ValueError:
             dur = 0
-        results.append({
-            "id": vid_id,
-            "title": title,
-            "uploader": uploader,
-            "duration": dur,
-            "thumbnail": thumbnail,
-        })
+        results.append({"id": vid_id, "title": title, "uploader": uploader, "duration": dur})
     return results
+
+
+@app.get("/search")
+def search(q: str, limit: int = 20):
+    raw = run_ytdlp([
+        f"ytsearch{limit}:{q}",
+        "--print", "%(id)s\t%(title)s\t%(uploader)s\t%(duration)s",
+        "--no-download",
+        "--flat-playlist",
+    ])
+    return parse_tracks(raw)
+
+
+@app.get("/playlist")
+def get_playlist(url: str, limit: int = 200):
+    if "youtube.com" not in url and "youtu.be" not in url:
+        raise HTTPException(status_code=400, detail="Invalid YouTube URL")
+    raw = run_ytdlp([
+        url,
+        "--print", "%(id)s\t%(title)s\t%(uploader)s\t%(duration)s",
+        "--no-download",
+        "--flat-playlist",
+        "--playlist-end", str(limit),
+    ])
+    return parse_tracks(raw)
 
 
 @app.get("/stream")
@@ -60,12 +73,34 @@ def stream(id: str):
         raise HTTPException(status_code=400, detail="Invalid video ID")
     raw = run_ytdlp([
         f"https://www.youtube.com/watch?v={id}",
-        "--print", "%(url)s\t%(title)s\t%(uploader)s\t%(thumbnail)s",
+        "--print", "%(url)s\t%(title)s\t%(uploader)s",
         "--format", "bestaudio[ext=m4a]/bestaudio/best",
         "--no-download",
     ])
     parts = raw.split("\t")
-    if len(parts) < 4:
+    if len(parts) < 3:
         raise HTTPException(status_code=500, detail="Failed to extract stream")
-    url, title, uploader, thumbnail = parts[:4]
-    return {"url": url, "title": title, "uploader": uploader, "thumbnail": thumbnail}
+    url, title, uploader = parts[:3]
+    return {"url": url, "title": title, "uploader": uploader}
+
+
+@app.get("/proxy")
+async def proxy_audio(url: str, request: Request):
+    req_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    if "range" in request.headers:
+        req_headers["Range"] = request.headers["range"]
+
+    async with httpx.AsyncClient(follow_redirects=True, timeout=60.0) as client:
+        resp = await client.get(url, headers=req_headers)
+        resp_headers = {"Access-Control-Allow-Origin": "*", "Accept-Ranges": "bytes"}
+        for h in ("content-length", "content-range"):
+            if h in resp.headers:
+                resp_headers[h] = resp.headers[h]
+        return StreamingResponse(
+            resp.aiter_bytes(chunk_size=65536),
+            status_code=resp.status_code,
+            media_type=resp.headers.get("content-type", "audio/mp4"),
+            headers=resp_headers,
+        )
