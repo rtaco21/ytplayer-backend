@@ -15,12 +15,12 @@ app.add_middleware(
 )
 
 
-def run_ytdlp(args: list[str]) -> str:
+def run_ytdlp(args: list[str], timeout: int = 30) -> str:
     result = subprocess.run(
         ["yt-dlp", "--no-warnings", *args],
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=timeout,
     )
     if result.returncode != 0:
         raise HTTPException(status_code=500, detail=result.stderr.strip())
@@ -90,7 +90,7 @@ def soundcloud_search(q: str, limit: int = 20):
         f"scsearch{limit}:{q}",
         "--print", "%(webpage_url)s\t%(title)s\t%(uploader)s\t%(duration)s\t%(thumbnail)s",
         "--no-download",
-    ])
+    ], timeout=120)
     results = []
     for line in raw.splitlines():
         parts = line.split("\t")
