@@ -35,11 +35,12 @@
   /* ── Content ── */
   #content { flex: 1; overflow-y: auto; padding: 16px 20px; padding-bottom: calc(var(--player-h) + 16px); }
   .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+  .tab-panel.active { display: block; animation: fadeIn .15s ease; }
 
   /* ── Track list ── */
   .track-list { display: flex; flex-direction: column; gap: 2px; }
-  .track { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: var(--radius); cursor: pointer; transition: background .15s; }
+  .track { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: var(--radius); cursor: pointer; transition: background .15s, opacity .15s, transform .15s; }
+  .track.animate-in { animation: fadeInUp .18s ease both; }
   .track:hover { background: var(--surface2); }
   .track.playing { background: var(--surface2); }
   .track.playing .track-title { color: var(--accent); }
@@ -112,7 +113,8 @@
 
   #controls { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0; }
   #ctrl-btns { display: flex; align-items: center; gap: 4px; }
-  .ctrl-btn { background: none; border: none; color: var(--text2); cursor: pointer; padding: 7px; border-radius: 50%; transition: color .15s, background .15s; display: flex; align-items: center; justify-content: center; }
+  .ctrl-btn { background: none; border: none; color: var(--text2); cursor: pointer; padding: 7px; border-radius: 50%; transition: color .15s, background .15s, transform .1s; display: flex; align-items: center; justify-content: center; }
+  .ctrl-btn:active { transform: scale(.88); }
   .ctrl-btn:hover { color: var(--text); background: var(--surface2); }
   .ctrl-btn.active { color: var(--accent); }
   #play-btn { color: var(--text); background: var(--surface2); border-radius: 50%; width: 38px; height: 38px; }
@@ -148,8 +150,8 @@
 
   /* ── Settings modal ── */
   #settings-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 300; align-items: center; justify-content: center; }
-  #settings-modal.visible { display: flex; }
-  #settings-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 340px; }
+  #settings-modal.visible { display: flex; animation: fadeIn .15s ease; }
+  #settings-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 340px; animation: scaleIn .15s ease; }
   #settings-box h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
   .setting-row { margin-bottom: 14px; }
   .setting-row label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 600; }
@@ -157,6 +159,61 @@
   .setting-row input:focus { border-color: var(--accent); }
   #settings-save { background: var(--accent); border: none; border-radius: 8px; padding: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 6px; }
   #settings-close { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 20px; float: right; margin-top: -4px; }
+
+  /* ── Playlists ── */
+  .pl-grid { display: flex; flex-direction: column; gap: 4px; }
+  .pl-card { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); cursor: pointer; transition: border-color .15s, background .15s; }
+  .pl-card:hover { border-color: var(--accent); background: var(--surface2); }
+  .pl-card-icon { width: 36px; height: 36px; background: var(--surface2); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0; }
+  .pl-card-info { flex: 1; min-width: 0; }
+  .pl-card-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pl-card-count { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .pl-card-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+  .pl-card:hover .pl-card-actions { opacity: 1; }
+  .pl-action-btn { background: none; border: none; color: var(--text3); cursor: pointer; padding: 5px; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: color .15s, background .15s; }
+  .pl-action-btn:hover { color: var(--text); background: var(--border); }
+  .pl-action-btn.danger:hover { color: var(--accent); }
+  #new-pl-btn { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; background: none; border: 1px dashed var(--border); border-radius: var(--radius); padding: 10px 14px; color: var(--text2); cursor: pointer; font-size: 13px; font-weight: 600; width: 100%; transition: border-color .15s, color .15s; }
+  #new-pl-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #pl-track-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  #pl-back-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; color: var(--text2); cursor: pointer; font-size: 12px; transition: border-color .15s, color .15s; }
+  #pl-back-btn:hover { border-color: var(--accent); color: var(--text); }
+  #pl-track-name { font-size: 15px; font-weight: 700; flex: 1; }
+  #pl-track-count { font-size: 12px; color: var(--text2); }
+
+  /* ── Add-to-playlist popup ── */
+  .pl-popup { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px; z-index: 400; min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  .pl-popup-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 5px; cursor: pointer; font-size: 13px; color: var(--text2); transition: background .1s, color .1s; white-space: nowrap; }
+  .pl-popup-item:hover { background: var(--surface2); color: var(--text); }
+  .pl-popup-item.new { color: var(--accent); }
+  .pl-popup-item.checked { color: var(--text); font-weight: 600; }
+
+  /* ── Modals (shared animation) ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 300; align-items: center; justify-content: center; }
+  .modal-overlay.visible { display: flex; animation: fadeIn .15s ease; }
+  .modal-box { animation: scaleIn .15s ease; }
+  @keyframes fadeIn  { from { opacity: 0; }               to { opacity: 1; } }
+  @keyframes scaleIn { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Shortcuts modal ── */
+  #shortcuts-modal .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 380px; max-height: 80vh; overflow-y: auto; }
+  #shortcuts-modal h2 { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+  .shortcut-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
+  .shortcut-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--surface2); gap: 12px; }
+  .shortcut-key { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 700; color: var(--text); white-space: nowrap; font-family: monospace; flex-shrink: 0; }
+  .shortcut-desc { font-size: 12px; color: var(--text2); }
+
+  /* ── Rename modal ── */
+  #rename-modal .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; width: 300px; }
+  #rename-modal h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+  #rename-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 13px; outline: none; margin-bottom: 10px; }
+  #rename-input:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .modal-btn { border: none; border-radius: 6px; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .modal-btn.primary { background: var(--accent); color: #fff; }
+  .modal-btn.secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .modal-btn:hover { opacity: .85; }
 
   ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; } ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
@@ -180,6 +237,7 @@
   <div class="tab" data-tab="liked">Liked</div>
   <div class="tab" data-tab="recent">Recent</div>
   <div class="tab" data-tab="radio">Radio</div>
+  <div class="tab" data-tab="playlists">Playlists</div>
 </div>
 
 <div id="content">
@@ -230,6 +288,21 @@
       <button id="radio-search-btn">Search</button>
     </div>
     <div id="radio-list" class="track-list"><div class="empty">Search for a station above</div></div>
+  </div>
+  <div id="tab-playlists" class="tab-panel">
+    <button id="new-pl-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New playlist
+    </button>
+    <div id="pl-list" class="pl-grid"></div>
+    <div id="pl-track-view" style="display:none;">
+      <div id="pl-track-header">
+        <button id="pl-back-btn">Back</button>
+        <span id="pl-track-name"></span>
+        <span id="pl-track-count"></span>
+      </div>
+      <div id="pl-track-list" class="track-list"></div>
+    </div>
   </div>
 </div>
 
@@ -316,7 +389,51 @@
       <label>Backend URL</label>
       <input id="backend-url-input" type="text" placeholder="https://your-app.onrender.com">
     </div>
+    <div class="setting-row" style="display:flex;align-items:center;justify-content:space-between;">
+      <label style="margin:0;">Crossfade between tracks</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="crossfade-toggle" style="accent-color:var(--accent);width:16px;height:16px;">
+      </label>
+    </div>
+    <div class="setting-row" id="crossfade-dur-row" style="display:none;">
+      <label>Crossfade duration: <span id="crossfade-dur-val">3s</span></label>
+      <input type="range" id="crossfade-dur" min="1" max="8" step="0.5" value="3" style="width:100%;margin-top:6px;accent-color:var(--accent);">
+    </div>
     <button id="settings-save">Save</button>
+  </div>
+</div>
+
+<div id="shortcuts-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h2>Keyboard shortcuts</h2>
+    <div class="shortcut-grid">
+      <div class="shortcut-row"><span class="shortcut-desc">Play / Pause</span><span class="shortcut-key">Space</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Next track</span><span class="shortcut-key">N</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Previous track</span><span class="shortcut-key">P</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Seek forward 10s</span><span class="shortcut-key">→</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Seek back 10s</span><span class="shortcut-key">←</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Volume up</span><span class="shortcut-key">↑</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Volume down</span><span class="shortcut-key">↓</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Mute</span><span class="shortcut-key">M</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Like track</span><span class="shortcut-key">L</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Shuffle</span><span class="shortcut-key">S</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Repeat</span><span class="shortcut-key">R</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Focus search</span><span class="shortcut-key">/</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Show shortcuts</span><span class="shortcut-key">?</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Close modal</span><span class="shortcut-key">Esc</span></div>
+    </div>
+    <div style="margin-top:14px;text-align:right;"><button class="modal-btn secondary" id="shortcuts-close">Close</button></div>
+  </div>
+</div>
+
+<div id="rename-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3 id="rename-modal-title">Rename playlist</h3>
+    <input id="rename-input" type="text" placeholder="Playlist name" autocomplete="off">
+    <div class="modal-actions">
+      <button class="modal-btn secondary" id="rename-cancel">Cancel</button>
+      <button class="modal-btn primary" id="rename-confirm">Save</button>
+    </div>
   </div>
 </div>
 
@@ -497,7 +614,12 @@ function buildTrackEl(t, index, listQueue) {
   if (t.duration) { const dur = document.createElement('span'); dur.className = 'track-dur'; dur.textContent = fmtTime(t.duration); el.append(dur); }
   el.append(srcBadge);
   if (unavail)    { const badge = document.createElement('span'); badge.className = 'track-unavail-badge'; badge.textContent = 'unavailable'; el.append(badge); }
-  el.append(likeBtn);
+  const addBtn = document.createElement('button');
+  addBtn.className = 'track-like-btn'; addBtn.title = 'Add to playlist';
+  addBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+  addBtn.addEventListener('click', e => { e.stopPropagation(); showAddToPlaylistPopup(t, addBtn); });
+
+  el.append(likeBtn, addBtn);
 
   if (!unavail) {
     el.addEventListener('click', e => {
@@ -514,7 +636,12 @@ function buildTrackEl(t, index, listQueue) {
 function renderList(container, tracks, emptyMsg) {
   if (!tracks?.length) { container.innerHTML = `<div class="empty">${emptyMsg}</div>`; return; }
   container.innerHTML = '';
-  tracks.forEach((t, i) => container.appendChild(buildTrackEl(t, i, tracks)));
+  tracks.forEach((t, i) => {
+    const el = buildTrackEl(t, i, tracks);
+    el.classList.add('animate-in');
+    el.style.animationDelay = Math.min(i * 18, 300) + 'ms';
+    container.appendChild(el);
+  });
   highlightPlaying();
 }
 
@@ -552,8 +679,9 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-    if (tab.dataset.tab === 'liked')  renderLiked();
-    if (tab.dataset.tab === 'recent') renderRecent();
+    if (tab.dataset.tab === 'liked')     renderLiked();
+    if (tab.dataset.tab === 'recent')    renderRecent();
+    if (tab.dataset.tab === 'playlists') renderPlaylists();
     if (tab.dataset.tab === 'radio' && !document.querySelector('.radio-station')) doRadioSearch();
   });
 });
@@ -1110,6 +1238,231 @@ globeCanvas.addEventListener('mouseleave',()=>{autoSpin=true;});
 (function spin(){if(autoSpin&&!globeDrag&&document.getElementById('globe-wrap').classList.contains('open')){globeRotY+=0.003;drawGlobe();}requestAnimationFrame(spin);})();
 GLOBE_ARCHIVED_END */
 
+// ── Crossfade ──────────────────────────────────────────────────────────────────
+let crossfadeEnabled = localStorage.getItem('crossfade') === '1';
+let crossfadeSecs    = parseFloat(localStorage.getItem('crossfadeSecs') || '3');
+let crossfading      = false;
+
+const cfToggle  = document.getElementById('crossfade-toggle');
+const cfDurRow  = document.getElementById('crossfade-dur-row');
+const cfDur     = document.getElementById('crossfade-dur');
+const cfDurVal  = document.getElementById('crossfade-dur-val');
+
+cfToggle.checked = crossfadeEnabled;
+cfDur.value      = crossfadeSecs;
+cfDurVal.textContent = crossfadeSecs + 's';
+cfDurRow.style.display = crossfadeEnabled ? '' : 'none';
+
+cfToggle.addEventListener('change', () => {
+  crossfadeEnabled = cfToggle.checked;
+  cfDurRow.style.display = crossfadeEnabled ? '' : 'none';
+  localStorage.setItem('crossfade', crossfadeEnabled ? '1' : '0');
+});
+cfDur.addEventListener('input', () => {
+  crossfadeSecs = parseFloat(cfDur.value);
+  cfDurVal.textContent = crossfadeSecs + 's';
+  localStorage.setItem('crossfadeSecs', crossfadeSecs);
+});
+
+function startCrossfade() {
+  if (crossfading || !crossfadeEnabled || !queue.length) return;
+  const nextIdx = shuffleOn
+    ? shuffleOrder[(shufflePos + 1) % shuffleOrder.length]
+    : (queueIndex + 1 < queue.length ? queueIndex + 1 : (repeatMode === 'all' ? 0 : -1));
+  if (nextIdx < 0) return;
+  crossfading = true;
+  const totalSteps = 20, interval = (crossfadeSecs * 1000) / totalSteps;
+  let step = 0;
+  const origVolume = audio.volume;
+  const timer = setInterval(() => {
+    step++;
+    audio.volume = Math.max(0, origVolume * (1 - step / totalSteps));
+    if (step >= totalSteps) {
+      clearInterval(timer);
+      crossfading = false;
+      audio.volume = origVolume;
+      if (shuffleOn) { shufflePos = (shufflePos + 1) % shuffleOrder.length; queueIndex = shuffleOrder[shufflePos]; }
+      else queueIndex = nextIdx;
+      playTrack(queue[queueIndex]);
+    }
+  }, interval);
+}
+
+audio.addEventListener('timeupdate', () => {
+  if (!crossfadeEnabled || crossfading || !audio.duration || isRadio || audio.loop) return;
+  if (audio.duration - audio.currentTime < crossfadeSecs) startCrossfade();
+});
+
+// ── Playlists ──────────────────────────────────────────────────────────────────
+const getPlaylists  = () => JSON.parse(localStorage.getItem('playlists') || '[]');
+const savePlaylists = v  => localStorage.setItem('playlists', JSON.stringify(v));
+
+function createPlaylist(name) {
+  const pls = getPlaylists();
+  const pl  = { id: Date.now().toString(), name, tracks: [] };
+  pls.unshift(pl);
+  savePlaylists(pls);
+  return pl;
+}
+
+function renderPlaylists() {
+  const pls = getPlaylists();
+  const grid = document.getElementById('pl-list');
+  document.getElementById('pl-track-view').style.display = 'none';
+  grid.style.display = '';
+  if (!pls.length) {
+    grid.innerHTML = '<div class="empty">No playlists yet</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  pls.forEach(pl => {
+    const card = document.createElement('div');
+    card.className = 'pl-card';
+    card.innerHTML = `
+      <div class="pl-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+      <div class="pl-card-info"><div class="pl-card-name">${escHtml(pl.name)}</div><div class="pl-card-count">${pl.tracks.length} track${pl.tracks.length===1?'':'s'}</div></div>
+      <div class="pl-card-actions">
+        <button class="pl-action-btn rename-pl" title="Rename"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="pl-action-btn danger delete-pl" title="Delete"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+      </div>`;
+    card.addEventListener('click', e => {
+      if (e.target.closest('.pl-action-btn')) return;
+      openPlaylist(pl.id);
+    });
+    card.querySelector('.rename-pl').addEventListener('click', e => { e.stopPropagation(); promptRename(pl.id); });
+    card.querySelector('.delete-pl').addEventListener('click', e => {
+      e.stopPropagation();
+      const pls2 = getPlaylists().filter(p => p.id !== pl.id);
+      savePlaylists(pls2);
+      renderPlaylists();
+    });
+    grid.appendChild(card);
+  });
+}
+
+function openPlaylist(id) {
+  const pl = getPlaylists().find(p => p.id === id);
+  if (!pl) return;
+  document.getElementById('pl-list').style.display = 'none';
+  const view = document.getElementById('pl-track-view');
+  view.style.display = '';
+  document.getElementById('pl-track-name').textContent = pl.name;
+  document.getElementById('pl-track-count').textContent = pl.tracks.length + ' tracks';
+  const listEl = document.getElementById('pl-track-list');
+  if (!pl.tracks.length) { listEl.innerHTML = '<div class="empty">No tracks yet — add from search results</div>'; return; }
+  listEl.innerHTML = '';
+  pl.tracks.forEach((t, i) => {
+    const el = buildTrackEl(t, i, pl.tracks);
+    const rmBtn = document.createElement('button');
+    rmBtn.className = 'pl-action-btn danger'; rmBtn.title = 'Remove';
+    rmBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+    rmBtn.style.cssText = 'opacity:1;margin-left:4px;';
+    rmBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const pls = getPlaylists(), p = pls.find(x => x.id === id);
+      if (!p) return;
+      p.tracks.splice(i, 1);
+      savePlaylists(pls);
+      openPlaylist(id);
+    });
+    el.appendChild(rmBtn);
+    listEl.appendChild(el);
+  });
+  highlightPlaying();
+}
+
+document.getElementById('pl-back-btn').addEventListener('click', renderPlaylists);
+
+function addTrackToPlaylist(plId, track) {
+  const pls = getPlaylists(), pl = pls.find(p => p.id === plId);
+  if (!pl) return;
+  if (!pl.tracks.some(t => t.id === track.id)) pl.tracks.push({ id: track.id, title: track.title, uploader: track.uploader, duration: track.duration, source: track.source, thumbnail: track.thumbnail });
+  savePlaylists(pls);
+}
+
+let renameTarget = null, renameResolve = null;
+function promptRename(plId) {
+  const pl = getPlaylists().find(p => p.id === plId);
+  if (!pl) return;
+  renameTarget = plId;
+  document.getElementById('rename-modal-title').textContent = 'Rename playlist';
+  document.getElementById('rename-input').value = pl.name;
+  document.getElementById('rename-modal').classList.add('visible');
+  setTimeout(() => { document.getElementById('rename-input').select(); }, 50);
+}
+function promptCreate() {
+  renameTarget = null;
+  document.getElementById('rename-modal-title').textContent = 'New playlist';
+  document.getElementById('rename-input').value = '';
+  document.getElementById('rename-modal').classList.add('visible');
+  setTimeout(() => document.getElementById('rename-input').focus(), 50);
+}
+document.getElementById('rename-confirm').addEventListener('click', () => {
+  const name = document.getElementById('rename-input').value.trim();
+  if (!name) return;
+  if (renameTarget) {
+    const pls = getPlaylists(), pl = pls.find(p => p.id === renameTarget);
+    if (pl) { pl.name = name; savePlaylists(pls); }
+  } else {
+    createPlaylist(name);
+  }
+  document.getElementById('rename-modal').classList.remove('visible');
+  renderPlaylists();
+});
+document.getElementById('rename-cancel').addEventListener('click', () => document.getElementById('rename-modal').classList.remove('visible'));
+document.getElementById('rename-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('rename-confirm').click(); if (e.key === 'Escape') document.getElementById('rename-cancel').click(); });
+document.getElementById('rename-modal').addEventListener('click', e => { if (e.target === document.getElementById('rename-modal')) document.getElementById('rename-cancel').click(); });
+document.getElementById('new-pl-btn').addEventListener('click', promptCreate);
+
+let activePopup = null;
+function showAddToPlaylistPopup(track, anchorEl) {
+  if (activePopup) { activePopup.remove(); activePopup = null; }
+  const pls = getPlaylists();
+  const popup = document.createElement('div');
+  popup.className = 'pl-popup';
+
+  if (pls.length) {
+    pls.forEach(pl => {
+      const inPl = pl.tracks.some(t => t.id === track.id);
+      const item = document.createElement('div');
+      item.className = 'pl-popup-item' + (inPl ? ' checked' : '');
+      item.innerHTML = (inPl ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`) + ` ${escHtml(pl.name)}`;
+      item.addEventListener('click', e => { e.stopPropagation(); addTrackToPlaylist(pl.id, track); popup.remove(); activePopup = null; });
+      popup.appendChild(item);
+    });
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height:1px;background:var(--border);margin:4px 0;';
+    popup.appendChild(sep);
+  }
+
+  const newItem = document.createElement('div');
+  newItem.className = 'pl-popup-item new';
+  newItem.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New playlist`;
+  newItem.addEventListener('click', e => {
+    e.stopPropagation(); popup.remove(); activePopup = null;
+    renameTarget = null;
+    document.getElementById('rename-modal-title').textContent = 'New playlist';
+    document.getElementById('rename-input').value = '';
+    document.getElementById('rename-modal').classList.add('visible');
+    renameResolve = (pl) => addTrackToPlaylist(pl.id, track);
+    const origConfirm = document.getElementById('rename-confirm').onclick;
+    document.getElementById('rename-confirm').addEventListener('click', function handler() {
+      const name = document.getElementById('rename-input').value.trim();
+      if (name && renameResolve) { const pl = createPlaylist(name); renameResolve(pl); renameResolve = null; }
+      document.getElementById('rename-confirm').removeEventListener('click', handler);
+    }, { once: true });
+    setTimeout(() => document.getElementById('rename-input').focus(), 50);
+  });
+  popup.appendChild(newItem);
+
+  const rect = anchorEl.getBoundingClientRect();
+  popup.style.top  = (rect.bottom + 4) + 'px';
+  popup.style.right = (window.innerWidth - rect.right) + 'px';
+  document.body.appendChild(popup);
+  activePopup = popup;
+  setTimeout(() => document.addEventListener('click', () => { popup.remove(); activePopup = null; }, { once: true }), 0);
+}
+
 // ── Keyboard shortcuts ─────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
@@ -1125,9 +1478,19 @@ document.addEventListener('keydown', e => {
     case 'KeyN': playNext(); break;
     case 'KeyP': playPrev(); break;
     case 'KeyR': document.getElementById('repeat-btn').click(); break;
-    case 'Slash': e.preventDefault(); document.getElementById('search-input').focus(); break;
+    case 'Slash':
+      if (e.shiftKey) { document.getElementById('shortcuts-modal').classList.toggle('visible'); }
+      else { e.preventDefault(); document.getElementById('search-input').focus(); }
+      break;
+    case 'Escape':
+      document.querySelectorAll('.modal-overlay.visible').forEach(m => m.classList.remove('visible'));
+      if (activePopup) { activePopup.remove(); activePopup = null; }
+      break;
   }
 });
+
+document.getElementById('shortcuts-close').addEventListener('click', () => document.getElementById('shortcuts-modal').classList.remove('visible'));
+document.getElementById('shortcuts-modal').addEventListener('click', e => { if (e.target === document.getElementById('shortcuts-modal')) document.getElementById('shortcuts-modal').classList.remove('visible'); });
 </script>
 </body>
 </html>
