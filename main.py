@@ -90,7 +90,6 @@ def soundcloud_search(q: str, limit: int = 20):
         f"scsearch{limit}:{q}",
         "--print", "%(webpage_url)s\t%(title)s\t%(uploader)s\t%(duration)s\t%(thumbnail)s",
         "--no-download",
-        "--flat-playlist",
     ])
     results = []
     for line in raw.splitlines():
