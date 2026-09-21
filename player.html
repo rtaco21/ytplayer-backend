@@ -809,6 +809,12 @@ document.getElementById('now-like').addEventListener('click', () => {
 
 audio.addEventListener('ended', playNext);
 
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && audioCtx?.state === 'suspended' && !audio.paused) {
+    audioCtx.resume();
+  }
+});
+
 audio.addEventListener('timeupdate', () => {
   if (progressDragging || !audio.duration || isRadio) return;
   const pct = audio.currentTime / audio.duration;
