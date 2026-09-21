@@ -398,7 +398,7 @@ function initAudioCtx() {
   dryGain     = audioCtx.createGain();
   wetGain     = audioCtx.createGain();
   reverbNode  = audioCtx.createConvolver(); reverbNode.buffer = makeImpulse(audioCtx, 2, 0.5);
-  analyser    = audioCtx.createAnalyser(); analyser.fftSize = 128;
+  analyser    = audioCtx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.8;
   sourceNode.connect(bassFilter);
   bassFilter.connect(trebleFilter);
   trebleFilter.connect(dryGain);
@@ -437,17 +437,32 @@ const ctx2d  = canvas.getContext('2d');
 function startVisualizer() {
   if (vizAnimId) return;
   const data = new Uint8Array(analyser.frequencyBinCount);
+  const BAR_COUNT = 80;
   function draw() {
     vizAnimId = requestAnimationFrame(draw);
     analyser.getByteFrequencyData(data);
-    const W = canvas.offsetWidth, H = canvas.height;
-    canvas.width = W;
+    const W = canvas.clientWidth || canvas.parentElement.clientWidth;
+    if (W !== canvas.width) canvas.width = W;
+    const H = canvas.height;
     ctx2d.clearRect(0, 0, W, H);
-    const barW = W / data.length;
-    for (let i = 0; i < data.length; i++) {
-      const v = data[i] / 255, h = v * H;
-      ctx2d.fillStyle = `rgba(255,68,68,${0.35 + v * 0.65})`;
-      ctx2d.fillRect(i * barW, H - h, barW - 1, h);
+
+    const step = Math.floor(data.length / BAR_COUNT);
+    const barW = W / BAR_COUNT;
+    const gap = Math.max(1, Math.floor(barW * 0.15));
+
+    const grad = ctx2d.createLinearGradient(0, H, 0, 0);
+    grad.addColorStop(0, 'rgba(255,68,68,0.9)');
+    grad.addColorStop(0.6, 'rgba(255,107,107,0.7)');
+    grad.addColorStop(1, 'rgba(255,150,150,0.3)');
+    ctx2d.fillStyle = grad;
+
+    for (let i = 0; i < BAR_COUNT; i++) {
+      let sum = 0;
+      for (let j = 0; j < step; j++) sum += data[i * step + j];
+      const v = (sum / step) / 255;
+      const h = Math.max(2, v * H);
+      const x = i * barW;
+      ctx2d.fillRect(x, H - h, barW - gap, h);
     }
   }
   draw();
