@@ -365,8 +365,6 @@ const mute  = document.getElementById('mute-btn');
   shuffleOn  = localStorage.getItem('shuffle') === '1';
   repeatMode = localStorage.getItem('repeat') || 'off';
   if (shuffleOn) document.getElementById('shuffle-btn').classList.add('active');
-  const rb = document.getElementById('repeat-btn');
-  if (repeatMode !== 'off') rb.classList.add('active');
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -759,7 +757,6 @@ function buildShuffleOrder() { shuffleOrder = queue.map((_,i)=>i).sort(()=>Math.
 
 function playNext() {
   if (isRadio || !queue.length) return;
-  if (repeatMode === 'one') { audio.currentTime = 0; audio.play(); return; }
   if (shuffleOn) {
     shufflePos = (shufflePos + 1) % shuffleOrder.length;
     queueIndex = shuffleOrder[shufflePos];
@@ -810,11 +807,25 @@ document.getElementById('shuffle-btn').addEventListener('click', () => {
   localStorage.setItem('shuffle', shuffleOn ? '1' : '0');
 });
 
-document.getElementById('repeat-btn').addEventListener('click', () => {
-  const modes = ['off','all','one'], btn = document.getElementById('repeat-btn');
-  repeatMode = modes[(modes.indexOf(repeatMode)+1)%3];
+function applyRepeatMode() {
+  const btn = document.getElementById('repeat-btn');
+  const icon = document.getElementById('repeat-icon');
+  audio.loop = repeatMode === 'one';
   btn.classList.toggle('active', repeatMode !== 'off');
+  if (repeatMode === 'one') {
+    icon.innerHTML = `<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/><text x="12" y="14" text-anchor="middle" font-size="7" fill="currentColor" stroke="none" font-weight="700">1</text>`;
+  } else {
+    icon.innerHTML = `<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>`;
+  }
   localStorage.setItem('repeat', repeatMode);
+}
+
+applyRepeatMode();
+
+document.getElementById('repeat-btn').addEventListener('click', () => {
+  const modes = ['off','all','one'];
+  repeatMode = modes[(modes.indexOf(repeatMode)+1)%3];
+  applyRepeatMode();
 });
 
 document.getElementById('now-like').addEventListener('click', () => {
