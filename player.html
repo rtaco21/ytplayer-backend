@@ -219,6 +219,25 @@
   .modal-btn.secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
   .modal-btn:hover { opacity: .85; }
 
+  /* ── A-B loop buttons ── */
+  .ab-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 700; color: var(--text3); cursor: pointer; flex-shrink: 0; transition: border-color .15s, color .15s; line-height: 16px; }
+  .ab-btn:hover { border-color: var(--accent); color: var(--text); }
+  .ab-btn.set { border-color: var(--accent); color: var(--accent); }
+  #ab-clear-btn { display: none; }
+  #ab-clear-btn.visible { display: inline; }
+
+  /* ── Track-settings modal ── */
+  #track-settings-modal .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; width: 320px; }
+  #track-settings-modal h3 { font-size: 14px; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #track-settings-modal .ts-artist { font-size: 12px; color: var(--text2); margin-bottom: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ts-ab-row { margin: 10px 0; padding: 10px; background: var(--surface2); border-radius: 6px; }
+  .ts-ab-row label { font-size: 11px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 8px; }
+  .ts-ab-inputs { display: flex; gap: 8px; align-items: center; }
+  .ts-ab-inputs span { font-size: 11px; color: var(--text2); flex-shrink: 0; }
+  .ts-ab-inputs input { width: 72px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; color: var(--text); font-size: 12px; outline: none; }
+  .ts-ab-inputs input:focus { border-color: var(--accent); }
+  .ts-override-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-left: 6px; flex-shrink: 0; }
+
   ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; } ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
 </style>
@@ -368,8 +387,11 @@
       </div>
       <div id="progress-wrap">
         <span id="time-cur">0:00</span>
+        <button id="ab-a-btn" class="ab-btn" title="Set loop start [">A</button>
         <input type="range" id="progress" min="0" max="1" step="0.001" value="0">
+        <button id="ab-b-btn" class="ab-btn" title="Set loop end ]">B</button>
         <span id="time-tot">0:00</span>
+        <button id="ab-clear-btn" class="ab-btn" title="Clear A-B loop \">×</button>
       </div>
     </div>
 
@@ -422,6 +444,9 @@
       <div class="shortcut-row"><span class="shortcut-desc">Like track</span><span class="shortcut-key">L</span></div>
       <div class="shortcut-row"><span class="shortcut-desc">Shuffle</span><span class="shortcut-key">S</span></div>
       <div class="shortcut-row"><span class="shortcut-desc">Repeat</span><span class="shortcut-key">R</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Set loop start</span><span class="shortcut-key">[</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Set loop end</span><span class="shortcut-key">]</span></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Clear A-B loop</span><span class="shortcut-key">\</span></div>
       <div class="shortcut-row"><span class="shortcut-desc">Focus search</span><span class="shortcut-key">/</span></div>
       <div class="shortcut-row"><span class="shortcut-desc">Show shortcuts</span><span class="shortcut-key">?</span></div>
       <div class="shortcut-row"><span class="shortcut-desc">Close modal</span><span class="shortcut-key">Esc</span></div>
@@ -437,6 +462,45 @@
     <div class="modal-actions">
       <button class="modal-btn secondary" id="rename-cancel">Cancel</button>
       <button class="modal-btn primary" id="rename-confirm">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="track-settings-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3 id="ts-title"></h3>
+    <div class="ts-artist" id="ts-artist"></div>
+    <div class="eq-row">
+      <span class="eq-label">Speed</span>
+      <input class="eq-slider" type="range" id="ts-speed" min="0.5" max="2" step="0.05" value="1">
+      <span class="eq-val" id="ts-speed-val">1.0x</span>
+    </div>
+    <div class="eq-row">
+      <span class="eq-label">Bass</span>
+      <input class="eq-slider" type="range" id="ts-bass" min="-12" max="12" step="1" value="0">
+      <span class="eq-val" id="ts-bass-val">0 dB</span>
+    </div>
+    <div class="eq-row">
+      <span class="eq-label">Treble</span>
+      <input class="eq-slider" type="range" id="ts-treble" min="-12" max="12" step="1" value="0">
+      <span class="eq-val" id="ts-treble-val">0 dB</span>
+    </div>
+    <div class="eq-row">
+      <span class="eq-label">Reverb</span>
+      <input class="eq-slider" type="range" id="ts-reverb" min="0" max="1" step="0.05" value="0">
+      <span class="eq-val" id="ts-reverb-val">0%</span>
+    </div>
+    <div class="ts-ab-row">
+      <label>A-B Loop (seconds, leave blank to disable)</label>
+      <div class="ts-ab-inputs">
+        <span>A</span><input id="ts-loop-a" type="number" min="0" step="0.1" placeholder="–">
+        <span>B</span><input id="ts-loop-b" type="number" min="0" step="0.1" placeholder="–">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" id="ts-reset">Reset</button>
+      <button class="modal-btn secondary" id="ts-cancel">Cancel</button>
+      <button class="modal-btn primary" id="ts-save">Save</button>
     </div>
   </div>
 </div>
@@ -467,6 +531,9 @@ let fxValues = { speed: 1, bass: 0, treble: 0, reverb: 0 };
 let progressDragging = false;
 let unavailableIds = new Set(); // session-only, never persisted
 let vizAnimId = null;
+let abA = null, abB = null;
+let preloadCache = {}; // { [trackId]: proxyUrl }
+let savedGlobalFx = null; // backup before per-track overrides
 
 // ── Thumbnail placeholder ──────────────────────────────────────────────────────
 const THUMB_PLACEHOLDER = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='42' height='32' viewBox='0 0 42 32'><rect width='42' height='32' fill='%23242424' rx='4'/><path d='M17 22v-9l10-2v9' stroke='%23444' stroke-width='1.5' fill='none' stroke-linecap='round'/><circle cx='15.5' cy='22' r='2.5' fill='%23444'/><circle cx='25.5' cy='20' r='2.5' fill='%23444'/></svg>`;
@@ -622,7 +689,7 @@ function startVisualizer() {
 }
 
 // ── Track cards ────────────────────────────────────────────────────────────────
-function buildTrackEl(t, index, listQueue) {
+function buildTrackEl(t, index, listQueue, playlistId = null) {
   const liked   = getLiked().some(x => x.id === t.id);
   const unavail = unavailableIds.has(t.id);
   const el = document.createElement('div');
@@ -876,6 +943,15 @@ function addRecent(t) {
 // ── YT Playback ────────────────────────────────────────────────────────────────
 async function playTrack(t) {
   isRadio = false; currentTrack = t;
+
+  // Clear A/B, then re-apply from overrides if any
+  clearAb();
+  if (t.overrides && Object.keys(t.overrides).length) {
+    applyTrackOverrides(t.overrides);
+  } else {
+    restoreGlobalFx();
+  }
+
   document.getElementById('now-title').textContent  = t.title;
   document.getElementById('now-artist').textContent = t.uploader || '';
   nowThumb.src = t.source === 'soundcloud' ? (t.thumbnail || THUMB_PLACEHOLDER) : `https://i.ytimg.com/vi/${t.id}/mqdefault.jpg`;
@@ -888,22 +964,28 @@ async function playTrack(t) {
   highlightPlaying();
   document.title = t.title + ' – YTPlayer';
   try {
-    const streamEndpoint = t.source === 'soundcloud'
-      ? `${BACKEND}/soundcloud/stream?url=${encodeURIComponent(t.id)}`
-      : `${BACKEND}/stream?id=${t.id}`;
-    const res = await fetch(streamEndpoint);
-    if (res.status === 404) { markUnavailable(t.id); setTimeout(playNext, 300); return; }
-    if (!res.ok) { console.warn('stream fetch failed', res.status); setTimeout(playNext, 300); return; }
-    const data = await res.json();
-    if (!data.url) { markUnavailable(t.id); setTimeout(playNext, 300); return; }
+    let proxyUrl = preloadCache[t.id];
+    delete preloadCache[t.id];
+    if (!proxyUrl) {
+      const streamEndpoint = t.source === 'soundcloud'
+        ? `${BACKEND}/soundcloud/stream?url=${encodeURIComponent(t.id)}`
+        : `${BACKEND}/stream?id=${t.id}`;
+      const res = await fetch(streamEndpoint);
+      if (res.status === 404) { markUnavailable(t.id); setTimeout(playNext, 300); return; }
+      if (!res.ok) { console.warn('stream fetch failed', res.status); setTimeout(playNext, 300); return; }
+      const data = await res.json();
+      if (!data.url) { markUnavailable(t.id); setTimeout(playNext, 300); return; }
+      proxyUrl = `${BACKEND}/proxy?url=${encodeURIComponent(data.url)}`;
+    }
     initAudioCtx();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    audio.src = `${BACKEND}/proxy?url=${encodeURIComponent(data.url)}`;
+    audio.src = proxyUrl;
     audio.playbackRate = fxValues.speed;
     await audio.play();
     setPlayIcon(true);
     addRecent(t);
     updateMediaSession(t);
+    setTimeout(preloadNextTrack, 3000);
   } catch (err) {
     console.error(err);
     setTimeout(playNext, 300);
@@ -1011,6 +1093,8 @@ document.addEventListener('visibilitychange', () => {
 
 audio.addEventListener('timeupdate', () => {
   if (progressDragging || !audio.duration || isRadio) return;
+  // A-B loop
+  if (abA != null && abB != null && audio.currentTime >= abB) audio.currentTime = abA;
   const pct = audio.currentTime / audio.duration;
   document.getElementById('progress').value = pct;
   updateSliderFill('progress', pct);
@@ -1278,6 +1362,172 @@ globeCanvas.addEventListener('mouseleave',()=>{autoSpin=true;});
 (function spin(){if(autoSpin&&!globeDrag&&document.getElementById('globe-wrap').classList.contains('open')){globeRotY+=0.003;drawGlobe();}requestAnimationFrame(spin);})();
 GLOBE_ARCHIVED_END */
 
+// ── A-B loop ───────────────────────────────────────────────────────────────────
+function updateAbUI() {
+  const aBtn = document.getElementById('ab-a-btn');
+  const bBtn = document.getElementById('ab-b-btn');
+  const clrBtn = document.getElementById('ab-clear-btn');
+  aBtn.textContent = abA != null ? 'A:' + fmtTime(abA) : 'A';
+  bBtn.textContent = abB != null ? 'B:' + fmtTime(abB) : 'B';
+  aBtn.classList.toggle('set', abA != null);
+  bBtn.classList.toggle('set', abB != null);
+  clrBtn.classList.toggle('visible', abA != null || abB != null);
+}
+
+function clearAb() { abA = null; abB = null; updateAbUI(); }
+
+document.getElementById('ab-a-btn').addEventListener('click', () => {
+  if (isRadio || !audio.duration) return;
+  abA = audio.currentTime;
+  if (abB != null && abA >= abB) abB = null;
+  updateAbUI();
+});
+document.getElementById('ab-b-btn').addEventListener('click', () => {
+  if (isRadio || !audio.duration) return;
+  abB = audio.currentTime;
+  if (abA != null && abB <= abA) abA = null;
+  updateAbUI();
+});
+document.getElementById('ab-clear-btn').addEventListener('click', clearAb);
+
+// ── FX UI sync ─────────────────────────────────────────────────────────────────
+function updateFxUI() {
+  const set = (id, v, fmt, mn, mx) => {
+    const el = document.getElementById(id); if (!el) return;
+    el.value = v;
+    document.getElementById(id + '-val').textContent = fmt(v);
+    updateSliderFill(id, (v - mn) / (mx - mn));
+  };
+  set('fx-speed',  fxValues.speed,  v => v.toFixed(2) + 'x',               0.5, 2);
+  set('fx-bass',   fxValues.bass,   v => (v>=0?'+':'') + v + ' dB',       -12, 12);
+  set('fx-treble', fxValues.treble, v => (v>=0?'+':'') + v + ' dB',       -12, 12);
+  set('fx-reverb', fxValues.reverb, v => Math.round(v * 100) + '%',          0,  1);
+}
+
+// ── Per-track overrides ────────────────────────────────────────────────────────
+function applyTrackOverrides(ov) {
+  if (!savedGlobalFx) savedGlobalFx = { ...fxValues };
+  fxValues = {
+    speed:  ov.speed  ?? savedGlobalFx.speed,
+    bass:   ov.bass   ?? savedGlobalFx.bass,
+    treble: ov.treble ?? savedGlobalFx.treble,
+    reverb: ov.reverb ?? savedGlobalFx.reverb,
+  };
+  updateFxUI();
+  applyFx();
+  if (ov.loopA != null && ov.loopB != null) { abA = ov.loopA; abB = ov.loopB; updateAbUI(); }
+}
+
+function restoreGlobalFx() {
+  if (!savedGlobalFx) return;
+  fxValues = { ...savedGlobalFx };
+  savedGlobalFx = null;
+  updateFxUI();
+  applyFx();
+}
+
+// ── Gapless preload ────────────────────────────────────────────────────────────
+async function preloadNextTrack() {
+  if (isRadio || !queue.length) return;
+  const nextIdx = shuffleOn
+    ? shuffleOrder[(shufflePos + 1) % shuffleOrder.length]
+    : queueIndex + 1;
+  if (nextIdx < 0 || nextIdx >= queue.length) return;
+  const t = queue[nextIdx];
+  if (!t || preloadCache[t.id]) return;
+  try {
+    const endpoint = t.source === 'soundcloud'
+      ? `${BACKEND}/soundcloud/stream?url=${encodeURIComponent(t.id)}`
+      : `${BACKEND}/stream?id=${t.id}`;
+    const res = await fetch(endpoint);
+    if (!res.ok || res.status === 404) return;
+    const data = await res.json();
+    if (data.url) preloadCache[t.id] = `${BACKEND}/proxy?url=${encodeURIComponent(data.url)}`;
+  } catch (_) {}
+}
+
+// ── Track settings modal ───────────────────────────────────────────────────────
+let tsTarget = null; // { plId, trackIdx }
+
+function openTrackSettings(plId, trackIdx) {
+  const pls = getPlaylists(), pl = pls.find(p => p.id === plId);
+  if (!pl) return;
+  const t = pl.tracks[trackIdx];
+  if (!t) return;
+  tsTarget = { plId, trackIdx };
+  const ov = t.overrides || {};
+  document.getElementById('ts-title').textContent = t.title;
+  document.getElementById('ts-artist').textContent = t.uploader || '';
+
+  const tsSet = (id, v, fmt, mn, mx) => {
+    document.getElementById(id).value = v;
+    document.getElementById(id + '-val').textContent = fmt(v);
+    updateSliderFill(id, (v - mn) / (mx - mn));
+  };
+  const spd = ov.speed  ?? 1;
+  const bas = ov.bass   ?? 0;
+  const tre = ov.treble ?? 0;
+  const rev = ov.reverb ?? 0;
+  tsSet('ts-speed',  spd, v => v.toFixed(2) + 'x',             0.5, 2);
+  tsSet('ts-bass',   bas, v => (v>=0?'+':'') + v + ' dB',     -12, 12);
+  tsSet('ts-treble', tre, v => (v>=0?'+':'') + v + ' dB',     -12, 12);
+  tsSet('ts-reverb', rev, v => Math.round(v * 100) + '%',        0,  1);
+  document.getElementById('ts-loop-a').value = ov.loopA ?? '';
+  document.getElementById('ts-loop-b').value = ov.loopB ?? '';
+
+  ['ts-speed','ts-bass','ts-treble','ts-reverb'].forEach(id => {
+    const el = document.getElementById(id);
+    const fmt = id === 'ts-speed' ? (v => v.toFixed(2)+'x')
+              : id === 'ts-reverb' ? (v => Math.round(v*100)+'%')
+              : (v => (v>=0?'+':'')+v+' dB');
+    const [mn, mx] = id === 'ts-speed' ? [0.5,2] : id === 'ts-reverb' ? [0,1] : [-12,12];
+    el.oninput = () => {
+      document.getElementById(id+'-val').textContent = fmt(parseFloat(el.value));
+      updateSliderFill(id, (parseFloat(el.value) - mn) / (mx - mn));
+    };
+  });
+
+  document.getElementById('track-settings-modal').classList.add('visible');
+}
+
+document.getElementById('ts-cancel').addEventListener('click', () => {
+  document.getElementById('track-settings-modal').classList.remove('visible');
+  tsTarget = null;
+});
+document.getElementById('track-settings-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('track-settings-modal')) {
+    document.getElementById('track-settings-modal').classList.remove('visible'); tsTarget = null;
+  }
+});
+document.getElementById('ts-reset').addEventListener('click', () => {
+  if (!tsTarget) return;
+  const pls = getPlaylists(), pl = pls.find(p => p.id === tsTarget.plId);
+  if (!pl) return;
+  delete pl.tracks[tsTarget.trackIdx].overrides;
+  savePlaylists(pls);
+  openPlaylist(tsTarget.plId);
+  document.getElementById('track-settings-modal').classList.remove('visible');
+  tsTarget = null;
+});
+document.getElementById('ts-save').addEventListener('click', () => {
+  if (!tsTarget) return;
+  const pls = getPlaylists(), pl = pls.find(p => p.id === tsTarget.plId);
+  if (!pl) return;
+  const spd = parseFloat(document.getElementById('ts-speed').value);
+  const bas = parseFloat(document.getElementById('ts-bass').value);
+  const tre = parseFloat(document.getElementById('ts-treble').value);
+  const rev = parseFloat(document.getElementById('ts-reverb').value);
+  const la  = document.getElementById('ts-loop-a').value;
+  const lb  = document.getElementById('ts-loop-b').value;
+  const ov = { speed: spd, bass: bas, treble: tre, reverb: rev };
+  if (la !== '' && lb !== '') { ov.loopA = parseFloat(la); ov.loopB = parseFloat(lb); }
+  pl.tracks[tsTarget.trackIdx].overrides = ov;
+  savePlaylists(pls);
+  openPlaylist(tsTarget.plId);
+  document.getElementById('track-settings-modal').classList.remove('visible');
+  tsTarget = null;
+});
+
 // ── Crossfade ──────────────────────────────────────────────────────────────────
 let crossfadeEnabled = localStorage.getItem('crossfade') === '1';
 let crossfadeSecs    = parseFloat(localStorage.getItem('crossfadeSecs') || '3');
@@ -1393,7 +1643,18 @@ function openPlaylist(id) {
   listEl.innerHTML = '';
   let dragSrc = null;
   pl.tracks.forEach((t, i) => {
-    const el = buildTrackEl(t, i, pl.tracks);
+    const el = buildTrackEl(t, i, pl.tracks, id);
+    if (t.overrides) {
+      const dot = document.createElement('span');
+      dot.className = 'ts-override-indicator'; dot.title = 'Has custom settings';
+      el.insertBefore(dot, el.querySelector('.track-like-btn'));
+    }
+    const gearBtn = document.createElement('button');
+    gearBtn.className = 'pl-action-btn'; gearBtn.title = 'Track settings';
+    gearBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+    gearBtn.style.cssText = 'opacity:1;';
+    gearBtn.addEventListener('click', e => { e.stopPropagation(); openTrackSettings(id, i); });
+    el.appendChild(gearBtn);
     const rmBtn = document.createElement('button');
     rmBtn.className = 'pl-action-btn danger'; rmBtn.title = 'Remove';
     rmBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
@@ -1552,6 +1813,9 @@ document.addEventListener('keydown', e => {
     case 'KeyN': playNext(); break;
     case 'KeyP': playPrev(); break;
     case 'KeyR': document.getElementById('repeat-btn').click(); break;
+    case 'BracketLeft':  document.getElementById('ab-a-btn').click(); break;
+    case 'BracketRight': document.getElementById('ab-b-btn').click(); break;
+    case 'Backslash':    clearAb(); break;
     case 'Slash':
       if (e.shiftKey) { document.getElementById('shortcuts-modal').classList.toggle('visible'); }
       else { e.preventDefault(); document.getElementById('search-input').focus(); }
@@ -1559,6 +1823,7 @@ document.addEventListener('keydown', e => {
     case 'Escape':
       document.querySelectorAll('.modal-overlay.visible').forEach(m => m.classList.remove('visible'));
       if (activePopup) { activePopup.remove(); activePopup = null; }
+      tsTarget = null;
       break;
   }
 });
