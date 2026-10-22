@@ -1,4 +1,6 @@
 import subprocess
+import sys
+import time
 import re
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -34,13 +36,31 @@ async def get_sc_client_id() -> str:
         return _sc_client_id
 
 
-def run_ytdlp(args: list[str], timeout: int = 30) -> str:
+_last_ytdlp_update = 0.0
+
+
+def update_ytdlp() -> bool:
+    global _last_ytdlp_update
+    if time.time() - _last_ytdlp_update < 600:
+        return False
+    _last_ytdlp_update = time.time()
     result = subprocess.run(
-        ["yt-dlp", "--no-warnings", *args],
+        [sys.executable, "-m", "pip", "install", "--no-cache-dir", "-U", "yt-dlp"],
         capture_output=True,
         text=True,
-        timeout=timeout,
+        timeout=180,
     )
+    return result.returncode == 0
+
+
+def run_ytdlp(args: list[str], timeout: int = 30) -> str:
+    cmd = ["yt-dlp", "--no-warnings", *args]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    if result.returncode != 0:
+        err = result.stderr
+        if any(k in err for k in ("Failed to extract", "yt-dlp -U", "Unable to extract", "Sign in to confirm")):
+            if update_ytdlp():
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         raise HTTPException(status_code=500, detail=result.stderr.strip())
     return result.stdout.strip()

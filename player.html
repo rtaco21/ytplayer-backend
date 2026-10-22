@@ -338,7 +338,7 @@
   </div>
   <div class="eq-row">
     <span class="eq-label">Bass</span>
-    <input class="eq-slider" type="range" id="fx-bass" min="-12" max="12" step="1" value="0">
+    <input class="eq-slider" type="range" id="fx-bass" min="-12" max="18" step="1" value="0">
     <span class="eq-val" id="fx-bass-val">0 dB</span>
   </div>
   <div class="eq-row">
@@ -477,7 +477,7 @@
     </div>
     <div class="eq-row">
       <span class="eq-label">Bass</span>
-      <input class="eq-slider" type="range" id="ts-bass" min="-12" max="12" step="1" value="0">
+      <input class="eq-slider" type="range" id="ts-bass" min="-12" max="18" step="1" value="0">
       <span class="eq-val" id="ts-bass-val">0 dB</span>
     </div>
     <div class="eq-row">
@@ -525,7 +525,7 @@ const ICONS = {
 let BACKEND = localStorage.getItem('backend') || 'https://ytplayer-backend.onrender.com';
 let queue = [], queueIndex = -1, shuffleOrder = [], shufflePos = -1;
 let shuffleOn = false, repeatMode = 'off', currentTrack = null, isRadio = false;
-let audioCtx = null, sourceNode = null, bassFilter = null, trebleFilter = null;
+let audioCtx = null, sourceNode = null, subFilter = null, bassFilter = null, trebleFilter = null;
 let reverbNode = null, gainNode = null, dryGain = null, wetGain = null, analyser = null, compressor = null;
 let fxValues = { speed: 1, bass: 0, treble: 0, reverb: 0 };
 let progressDragging = false;
@@ -578,7 +578,8 @@ function initAudioCtx() {
   if (audioCtx) return;
   audioCtx    = new (window.AudioContext || window.webkitAudioContext)();
   sourceNode  = audioCtx.createMediaElementSource(audio);
-  bassFilter  = audioCtx.createBiquadFilter(); bassFilter.type = 'lowshelf';   bassFilter.frequency.value = 200;
+  subFilter   = audioCtx.createBiquadFilter(); subFilter.type   = 'peaking'; subFilter.frequency.value = 65;   subFilter.Q.value = 2.8;
+  bassFilter  = audioCtx.createBiquadFilter(); bassFilter.type  = 'peaking'; bassFilter.frequency.value = 100;  bassFilter.Q.value = 1.8;
   trebleFilter= audioCtx.createBiquadFilter(); trebleFilter.type = 'highshelf'; trebleFilter.frequency.value = 3000;
   gainNode    = audioCtx.createGain();
   dryGain     = audioCtx.createGain();
@@ -586,12 +587,13 @@ function initAudioCtx() {
   reverbNode  = audioCtx.createConvolver(); reverbNode.buffer = makeImpulse(audioCtx, 2, 0.5);
   analyser    = audioCtx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.8;
   compressor  = audioCtx.createDynamicsCompressor();
-  compressor.threshold.value = -18;
-  compressor.knee.value      = 8;
-  compressor.ratio.value     = 4;
-  compressor.attack.value    = 0.003;
-  compressor.release.value   = 0.25;
-  sourceNode.connect(bassFilter);
+  compressor.threshold.value = -22;
+  compressor.knee.value      = 6;
+  compressor.ratio.value     = 6;
+  compressor.attack.value    = 0.008;
+  compressor.release.value   = 0.12;
+  sourceNode.connect(subFilter);
+  subFilter.connect(bassFilter);
   bassFilter.connect(trebleFilter);
   trebleFilter.connect(dryGain);
   trebleFilter.connect(reverbNode);
@@ -616,9 +618,10 @@ function makeImpulse(ctx, dur, decay) {
 
 function applyFx() {
   if (!audioCtx) return;
-  audio.playbackRate      = fxValues.speed;
-  bassFilter.gain.value   = fxValues.bass;
-  trebleFilter.gain.value = fxValues.treble;
+  audio.playbackRate       = fxValues.speed;
+  subFilter.gain.value     = fxValues.bass * 0.65;
+  bassFilter.gain.value    = fxValues.bass;
+  trebleFilter.gain.value  = fxValues.treble;
   dryGain.gain.value      = 1 - fxValues.reverb * 0.8;
   wetGain.gain.value      = fxValues.reverb;
 }
@@ -1145,13 +1148,13 @@ function setupFxSlider(id, key, fmt, sMin, sMax) {
   });
 }
 setupFxSlider('fx-speed',  'speed',  v => v.toFixed(2)+'x',       0.5, 2);
-setupFxSlider('fx-bass',   'bass',   v => (v>=0?'+':'')+v+' dB', -12, 12);
+setupFxSlider('fx-bass',   'bass',   v => (v>=0?'+':'')+v+' dB', -12, 18);
 setupFxSlider('fx-treble', 'treble', v => (v>=0?'+':'')+v+' dB', -12, 12);
 setupFxSlider('fx-reverb', 'reverb', v => Math.round(v*100)+'%',    0,  1);
 
 document.getElementById('eq-reset').addEventListener('click', () => {
   fxValues = { speed:1, bass:0, treble:0, reverb:0 };
-  [['fx-speed',1,.5,2],['fx-bass',0,-12,12],['fx-treble',0,-12,12],['fx-reverb',0,0,1]].forEach(([id,v,mn,mx]) => {
+  [['fx-speed',1,.5,2],['fx-bass',0,-12,18],['fx-treble',0,-12,12],['fx-reverb',0,0,1]].forEach(([id,v,mn,mx]) => {
     document.getElementById(id).value = v; updateSliderFill(id, (v-mn)/(mx-mn));
   });
   document.getElementById('fx-speed-val').textContent  = '1.00x';
@@ -1399,7 +1402,7 @@ function updateFxUI() {
     updateSliderFill(id, (v - mn) / (mx - mn));
   };
   set('fx-speed',  fxValues.speed,  v => v.toFixed(2) + 'x',               0.5, 2);
-  set('fx-bass',   fxValues.bass,   v => (v>=0?'+':'') + v + ' dB',       -12, 12);
+  set('fx-bass',   fxValues.bass,   v => (v>=0?'+':'') + v + ' dB',       -12, 18);
   set('fx-treble', fxValues.treble, v => (v>=0?'+':'') + v + ' dB',       -12, 12);
   set('fx-reverb', fxValues.reverb, v => Math.round(v * 100) + '%',          0,  1);
 }
@@ -1469,7 +1472,7 @@ function openTrackSettings(plId, trackIdx) {
   const tre = ov.treble ?? 0;
   const rev = ov.reverb ?? 0;
   tsSet('ts-speed',  spd, v => v.toFixed(2) + 'x',             0.5, 2);
-  tsSet('ts-bass',   bas, v => (v>=0?'+':'') + v + ' dB',     -12, 12);
+  tsSet('ts-bass',   bas, v => (v>=0?'+':'') + v + ' dB',     -12, 18);
   tsSet('ts-treble', tre, v => (v>=0?'+':'') + v + ' dB',     -12, 12);
   tsSet('ts-reverb', rev, v => Math.round(v * 100) + '%',        0,  1);
   document.getElementById('ts-loop-a').value = ov.loopA ?? '';
@@ -1480,7 +1483,7 @@ function openTrackSettings(plId, trackIdx) {
     const fmt = id === 'ts-speed' ? (v => v.toFixed(2)+'x')
               : id === 'ts-reverb' ? (v => Math.round(v*100)+'%')
               : (v => (v>=0?'+':'')+v+' dB');
-    const [mn, mx] = id === 'ts-speed' ? [0.5,2] : id === 'ts-reverb' ? [0,1] : [-12,12];
+    const [mn, mx] = id === 'ts-speed' ? [0.5,2] : id === 'ts-reverb' ? [0,1] : id === 'ts-bass' ? [-12,18] : [-12,12];
     el.oninput = () => {
       document.getElementById(id+'-val').textContent = fmt(parseFloat(el.value));
       updateSliderFill(id, (parseFloat(el.value) - mn) / (mx - mn));
