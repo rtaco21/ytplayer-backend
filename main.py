@@ -16,6 +16,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+_sc_client_id: str | None = None
+
+async def get_sc_client_id() -> str:
+    global _sc_client_id
+    if _sc_client_id:
+        return _sc_client_id
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
+        page = await client.get("https://soundcloud.com", headers=headers)
+        scripts = re.findall(r'<script[^>]+src="(https://a-v2\.sndcdn\.com/assets/[^"]+\.js)"', page.text)
+        if not scripts:
+            raise HTTPException(status_code=500, detail="Could not locate SoundCloud script bundle")
+        js = await client.get(scripts[-1], headers=headers)
+        match = re.search(r'client_id\s*:\s*"([A-Za-z0-9]{32})"', js.text)
+        if not match:
+            raise HTTPException(status_code=500, detail="Could not extract SoundCloud client_id")
+        _sc_client_id = match.group(1)
+        return _sc_client_id
+
 
 _last_ytdlp_update = 0.0
 
@@ -102,6 +121,62 @@ def stream(id: str):
         raise HTTPException(status_code=500, detail="Failed to extract stream")
     url, title, uploader = parts[:3]
     return {"url": url, "title": title, "uploader": uploader}
+
+
+@app.get("/soundcloud/search")
+async def soundcloud_search(q: str, limit: int = 20):
+    global _sc_client_id
+    try:
+        client_id = await get_sc_client_id()
+    except HTTPException:
+        _sc_client_id = None
+        raise
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
+        resp = await client.get(
+            "https://api-v2.soundcloud.com/search/tracks",
+            params={"q": q, "client_id": client_id, "limit": limit},
+            headers=headers,
+        )
+        if resp.status_code == 401:
+            _sc_client_id = None
+            raise HTTPException(status_code=500, detail="SoundCloud client_id expired, retry")
+        if not resp.is_success:
+            raise HTTPException(status_code=500, detail=f"SoundCloud API error {resp.status_code}")
+        data = resp.json()
+    results = []
+    for t in data.get("collection", []):
+        dur = t.get("duration", 0)
+        try:
+            dur = int(dur) // 1000
+        except (TypeError, ValueError):
+            dur = 0
+        results.append({
+            "id": t.get("permalink_url", ""),
+            "title": t.get("title", ""),
+            "uploader": t.get("user", {}).get("username", ""),
+            "duration": dur,
+            "thumbnail": (t.get("artwork_url") or "").replace("-large", "-t300x300"),
+            "source": "soundcloud",
+        })
+    return results
+
+
+@app.get("/soundcloud/stream")
+def soundcloud_stream(url: str):
+    if "soundcloud.com" not in url:
+        raise HTTPException(status_code=400, detail="Invalid SoundCloud URL")
+    raw = run_ytdlp([
+        url,
+        "--print", "%(url)s\t%(title)s\t%(uploader)s",
+        "--format", "bestaudio/best",
+        "--no-download",
+    ])
+    parts = raw.split("\t")
+    if len(parts) < 3:
+        raise HTTPException(status_code=500, detail="Failed to extract stream")
+    stream_url, title, uploader = parts[:3]
+    return {"url": stream_url, "title": title, "uploader": uploader}
 
 
 @app.get("/proxy")
